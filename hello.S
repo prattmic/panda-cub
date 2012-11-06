@@ -1,38 +1,59 @@
 .globl start
 start:
-hello:
-    ldr r0, =0x48020000
-    mov r1, #0x48
-    str r1, [r0]
-    mov r1, #0x45
-    str r1, [r0]
-    mov r1, #0x4C
-    str r1, [r0]
-    mov r1, #0x4C
-    str r1, [r0]
-    mov r1, #0x4F
-    str r1, [r0]
-    mov r1, #0x0A
-    str r1, [r0]
-    mov r1, #0x0D
-    str r1, [r0]
+    ldr r0, =cpu0_on
+    bl  puts
 
+    ldr r0, =mmu0_tlb
+    bl start_mmu
+
+    ldr r0, =mmu0_on
+    bl  puts
+
+    /* Set CPU1 boot address */
+    ldr r0, =cpu1
+    ldr r1, =0x48281804     /* AUX_CORE_BOOT_1 */
+    str r0, [r1]
+
+    /* Start CPU1 */
+    ldr r0, =0x48281800     /* AUX_CORE_BOOT_0 */
+    ldr r1, [r0]
+    orr r1, r1, #4
+    str r1, [r0]
+    sev
+
+    b   hang
+
+hang:
+    b .
+
+cpu1:
+    ldr r0, =cpu1_on
+    bl  puts
+
+    ldr r0, =mmu1_tlb
+    bl start_mmu
+
+    ldr r0, =mmu1_on
+    bl  puts
+
+    b   hang
+
+/* r0 - mmu table base */
 start_mmu:
-    mov r0, #4096
     ldr r1, =0xC02
-    ldr r2, =mmu_tlb
+    mov r2, #4096
     mov r3, #0x100000
+    mov r4, r0
 
 fill_table:
-    str r1, [r2]
+    str r1, [r0]
     add r1, r1, r3
-    add r2, r2, #4
-    adds r0, r0, #-1
+    add r0, r0, #4
+    adds r2, r2, #-1
     bpl fill_table
 
     /* Set table base */
-    ldr r0, mmu_tlb_base
-    mcr p15, 0, r0, c2, c0, 0
+    mcr p15, 0, r4, c2, c0, 0
     /* Set page table entry to manager */
     mov r0, #0x3
     mcr p15, 0, r0, c3, c0, 0
@@ -41,12 +62,29 @@ fill_table:
     orr r0, r0, #1
     mcr p15, 0, r0, c1, c0, 0
 
-hang:
-    b .
+    bx  lr
 
-mmu_tlb_base:
-    .word   mmu_tlb
+/* r0 - ptr to string */
+puts:
+    ldr     r2, =0x48020000
+1:  ldrb    r1, [r0]
+    teq     r1, #0
+    bxeq    lr
+    str     r1, [r2]
+    add     r0, r0, #1
+    b       1b
+
+cpu0_on:
+    .asciz  "CPU0 Booted\r\n"
+cpu1_on:
+    .asciz  "CPU1 Booted\r\n"
+mmu0_on:
+    .asciz  "MMU0 Started\r\n"
+mmu1_on:
+    .asciz  "MMU1 Started\r\n"
 
 .section    .tlb, "a"
-mmu_tlb:
-    .word   0x80300c02
+mmu0_tlb:
+    .space  4096*4
+mmu1_tlb:
+    .space  4096*4

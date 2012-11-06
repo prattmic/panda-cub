@@ -1,4 +1,5 @@
 hello
+ramdisk
 *.img
 *.elf
 *.o
