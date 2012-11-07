@@ -58,7 +58,7 @@ fill_table:
 
     /* Map kernel to 0xABC */
     mov r0, r4
-    ldr r1, =2748*4
+    ldr r1, =0xABC*4
     add r0, r0, r1
     ldr r1, =0x80300C02
     str r1, [r0]
