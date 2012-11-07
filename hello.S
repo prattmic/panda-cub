@@ -21,9 +21,32 @@ start:
     str r1, [r0]
     sev
 
+    /* Make 0xABCxxxxx == 0x803xxxxx */
+    ldr r0, =mmu0_tlb
+    ldr r1, =2748*4
+    add r0, r0, r1
+    ldr r1, =0x80300C02
+    str r1, [r0]
+
+    ldr r0, =mmu_craziness
+    ldr r1, =0x000FFFFF
+    ldr r2, =0xABC00000
+    and r0, r0, r1
+    orr r0, r0, r2
+    mov pc, r0
+
+    b   hang
+
+mmu_craziness:
+    ldr r0, =crazy_addr
+    bl  puts
+
     b   hang
 
 hang:
+    b .
+
+hang1:
     b .
 
 cpu1:
@@ -36,7 +59,7 @@ cpu1:
     ldr r0, =mmu1_on
     bl  puts
 
-    b   hang
+    b   hang1
 
 /* r0 - mmu table base */
 start_mmu:
@@ -82,6 +105,8 @@ mmu0_on:
     .asciz  "MMU0 Started\r\n"
 mmu1_on:
     .asciz  "MMU1 Started\r\n"
+crazy_addr:
+    .asciz  "Executing at 0xABCxxxxx\r\n"
 
 .section    .tlb, "a"
 mmu0_tlb:
