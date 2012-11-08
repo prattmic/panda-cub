@@ -3,14 +3,13 @@ start:
     /* Save cpu1 start address */
     adr r11, cpu1_start
 
+    ldr sp, =0x80500000
+
     ldr r0, =mmu0_tlb
     ldr r5, =cpu0_mmu_enabled
     b   start_mmu
 
 cpu0_mmu_enabled:
-    ldr r0, =mmu0_on
-    bl  puts
-
     /* Set CPU1 boot address */
     ldr r1, =0x48281804     /* AUX_CORE_BOOT_1 */
     str r11, [r1]
@@ -22,24 +21,19 @@ cpu0_mmu_enabled:
     str r1, [r0]
     sev
 
+    bl  start_kernel
+
     b   hang
 
 hang:
     b .
 
 cpu1_start:
+    ldr sp, =0x80600000
+
     ldr r0, =mmu1_tlb
     ldr r5, =cpu1_mmu_enabled
     b   start_mmu
-
-cpu1_mmu_enabled:
-    ldr r0, =mmu1_on
-    bl  puts
-
-    b   hang1
-
-hang1:
-    b .
 
 /* r0 - mmu table base 
  * r5 - virtual address to jump to */
@@ -74,21 +68,6 @@ fill_table:
     mcr p15, 0, r0, c1, c0, 0
 
     bx  r5
-
-/* r0 - ptr to string */
-puts:
-    ldr     r2, =0x48020000
-1:  ldrb    r1, [r0]
-    teq     r1, #0
-    bxeq    lr
-    str     r1, [r2]
-    add     r0, r0, #1
-    b       1b
-
-mmu0_on:
-    .asciz  "CPU0 on and MMU0 Started\r\n"
-mmu1_on:
-    .asciz  "CPU1 on and MMU1 Started\r\n"
 
 .section    .tlb, "a"
 mmu0_tlb:
