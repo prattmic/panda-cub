@@ -4,7 +4,7 @@ void start_kernel(void) {
     ghetto_puts("Hello from C\r\n");
 }
 
-void cpu1_mmu_enabled(void) {
+void cpu1_kernel(void) {
     ghetto_puts("CPU1 Booted\r\n");
 }
 

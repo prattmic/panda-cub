@@ -35,6 +35,10 @@ cpu1_start:
     ldr r5, =cpu1_mmu_enabled
     b   start_mmu
 
+cpu1_mmu_enabled:
+    bl  cpu1_kernel
+    b   hang
+
 /* r0 - mmu table base 
  * r5 - virtual address to jump to */
 start_mmu:
