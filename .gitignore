@@ -1,5 +1,6 @@
 kernel
 ramdisk
+tags
 *.img
 *.elf
 *.o

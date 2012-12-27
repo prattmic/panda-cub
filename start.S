@@ -1,80 +1,141 @@
+/* Entry point for CPU 0 */
 .globl start
 start:
-    /* Save cpu1 start address */
-    adr r11, cpu1_start
+    nop
 
-    ldr sp, =0x80500000
+    ldr sp, =0x802FFFF0
+    
+    ldr r0, =0              /* We are on CPU 0 */
 
-    ldr r0, =mmu0_tlb
-    ldr r5, =cpu0_mmu_enabled
-    b   start_mmu
+    bl  mmu_early_fill_identity
 
-cpu0_mmu_enabled:
-    /* Set CPU1 boot address */
-    ldr r1, =0x48281804     /* AUX_CORE_BOOT_1 */
-    str r11, [r1]
+    /* Map kernel data */
+    ldr r1, =0x80000C02     /* Map 0x800xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r2, =4*0xABC        /* Index; 0xABCxxxxx will map to 0x800xxxxx */
+    bl  mmu_early_set_descriptor
 
-    /* Start CPU1 */
-    ldr r0, =0x48281800     /* AUX_CORE_BOOT_0 */
-    ldr r1, [r0]
-    orr r1, r1, #4
-    str r1, [r0]
-    sev
+    /* Map kernel text */
+    ldr r1, =0x80100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x800xxxxx */
+    bl  mmu_early_set_descriptor
 
-    bl  start_kernel
+    /* Map CPU0 kernel stack */
+    ldr r1, =0x80200C02     /* Map 0x802xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r2, =4*0xABE        /* Index; 0xABExxxxx will map to 0x800xxxxx */
+    bl  mmu_early_set_descriptor
+
+    bl  mmu_enable
+
+    /* Switch stack pointer to virtual address */
+    ldr r0, =0xFFF00000
+    bic sp, r0
+    ldr r0, =0xABE00000
+    orr sp, sp, r0
+
+    adr r0, cpu1_start      /* start_kernel takes the physical address of cpu1_start */
+    ldr r1, =start_kernel
+    blx r1
 
     b   hang
+
+/* Entry point for CPU 1 */
+.globl cpu1_start
+cpu1_start:
+    nop
+
+    ldr sp, =0x803FFFF0
+    
+    ldr r0, =1              /* We are on CPU 1 */
+
+    bl  mmu_early_fill_identity
+
+    /* Map kernel data */
+    ldr r1, =0x80000C02     /* Map 0x800xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r2, =4*0xABC        /* Index; 0xABCxxxxx will map to 0x800xxxxx */
+    bl  mmu_early_set_descriptor
+
+    /* Map kernel text */
+    ldr r1, =0x80100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x800xxxxx */
+    bl  mmu_early_set_descriptor
+
+    /* Map CPU1 kernel stack */
+    ldr r1, =0x80300C02     /* Map 0x803xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r2, =4*0xABF        /* Index; 0xABFxxxxx will map to 0x800xxxxx */
+    bl  mmu_early_set_descriptor
+
+    bl  mmu_enable
+
+    /* Switch stack pointer to virtual address */
+    ldr r0, =0xFFF00000
+    bic sp, r0
+    ldr r0, =0xABF00000
+    orr sp, sp, r0
+
+    ldr r0, =cpu1_kernel
+    blx r0
+
+    b   hang
+
+/* MMU: Enable
+ * r0: CPU number */
+mmu_enable:
+    ldr r1, =tlb_phys_addr  /* Load physical address of first level descriptor table */
+    
+    lsl r2, r0, #14         /* The table is 16KB long, so if we are on CPU 1, */
+    add r1, r1, r2          /* we add 16KB to the address. */
+
+    mcr p15, 0, r1, c2, c0, 0   /* Write table base address to TLBR0 */
+
+    mrc p15, 0, r1, c3, c0, 0   /* Read DACR */
+    orr r1, r1, #3              /* Set domain 0 to manager */
+    mcr p15, 0, r1, c3, c0, 0   /* Write DACR */
+
+    mrc p15, 0, r1, c1, c0, 0   /* Read SCTLR */
+    orr r1, r1, #1              /* Enable MMU */
+    mcr p15, 0, r1, c1, c0, 0   /* Write SCTLR */
+
+    bx lr
+
+/* MMU: Early set descriptor
+ * r0: CPU number 
+ * r1: descriptor value 
+ * r2: table index
+ * r3: clobbered (table base address)
+ * r4: clobbered (shifted CPU number) */
+mmu_early_set_descriptor:
+    ldr r3, =tlb_phys_addr  /* Load physical address of first level descriptor table */
+    
+    lsl r4, r0, #14         /* The table is 16KB long, so if we are on CPU 1, */
+    add r3, r3, r4          /* we add 16KB to the address. */
+
+    str r1, [r3, r2]        /* table base + index = value */
+
+    bx  lr
+
+/* MMU: fill table with identity mapping
+ * r0: CPU number (untouched, passed directly to mmu_early_set_descriptor
+ * r1: clobbered
+ * r2: clobbered */
+mmu_early_fill_identity:
+    /* All entries will be set to section format, with the following attributes:
+     * -- Full access at all privilege levels 
+     * -- Full execution permission
+     * -- Domain 0
+     * -- Strongly ordered memory, page sharable */
+    ldr r1, =0xC02
+    ldr r2, =0
+    push {lr}
+
+fill:
+    bl  mmu_early_set_descriptor
+    add r1, r1, #0x100000   /* Update entry to next section */
+    add r2, r2, #4
+    cmp r2, #4*4096
+    blt fill                /* The table only has 4096 entries */
+
+    pop {lr}
+    bx  lr
 
 hang:
-    b .
-
-cpu1_start:
-    ldr sp, =0x80600000
-
-    ldr r0, =mmu1_tlb
-    ldr r5, =cpu1_mmu_enabled
-    b   start_mmu
-
-cpu1_mmu_enabled:
-    bl  cpu1_kernel
-    b   hang
-
-/* r0 - mmu table base 
- * r5 - virtual address to jump to */
-start_mmu:
-    ldr r1, =0xC02
-    mov r2, #4096
-    mov r3, #0x100000
-    mov r4, r0
-
-fill_table:
-    str r1, [r0]
-    add r1, r1, r3
-    add r0, r0, #4
-    adds r2, r2, #-1
-    bpl fill_table
-
-    /* Map kernel to 0xABC */
-    mov r0, r4
-    ldr r1, =0xABC*4
-    add r0, r0, r1
-    ldr r1, =0x80300C02
-    str r1, [r0]
-
-    /* Set table base */
-    mcr p15, 0, r4, c2, c0, 0
-    /* Set page table entry to manager */
-    mov r0, #0x3
-    mcr p15, 0, r0, c3, c0, 0
-    /* Enable MMU */
-    mrc p15, 0, r0, c1, c0, 0
-    orr r0, r0, #1
-    mcr p15, 0, r0, c1, c0, 0
-
-    bx  r5
-
-.section    .tlb, "a"
-mmu0_tlb:
-    .space  4096*4
-mmu1_tlb:
-    .space  4096*4
+    b   .
