@@ -1,8 +1,6 @@
 /* Entry point for CPU 0 */
 .globl start
 start:
-    nop
-
     ldr sp, =0x802FFFF0
     
     ldr r0, =0              /* We are on CPU 0 */
@@ -41,8 +39,6 @@ start:
 /* Entry point for CPU 1 */
 .globl cpu1_start
 cpu1_start:
-    nop
-
     ldr sp, =0x803FFFF0
     
     ldr r0, =1              /* We are on CPU 1 */
