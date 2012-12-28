@@ -1,12 +1,21 @@
 MEMORY
 {
-    kerneldata (rw) : ORIGIN = 0xABC00000, LENGTH = 1M
-    kerneltext (rx) : ORIGIN = 0xABD00000, LENGTH = 1M
+    kerneltext (rx) : ORIGIN = 0xABC00000, LENGTH = 1M
+    kerneldata (rw) : ORIGIN = 0xABD00000, LENGTH = 1M
 }
 
 SECTIONS
 {
-    .data : AT ( 0x80000000 ) { 
+    .text : AT ( 0x81000000 ) { 
+        . = ALIGN(4);
+        *(.start) 
+        *(.text*) 
+        *(.rodata*)
+        *(.got*)    /* Global offset table */
+        . = ALIGN(4);
+    } > kerneltext
+
+    .data : AT ( 0x81100000 ) { 
         . = ALIGN(4);
         *(.data*) 
         . = ALIGN(4);
@@ -24,14 +33,6 @@ SECTIONS
         *(.tlb)
         . = ALIGN(4);
     } > kerneldata
-
-    .text : AT ( 0x80100000 ) { 
-        . = ALIGN(4);
-        *(.text*) 
-        *(.rodata*)
-        *(.got*)    /* Global offset table */
-        . = ALIGN(4);
-    } > kerneltext
 }
 
 tlb_phys_addr = LOADADDR(.tlb);

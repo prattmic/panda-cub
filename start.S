@@ -1,24 +1,25 @@
 /* Entry point for CPU 0 */
+.section .start, "x"        /* Put start in its own section to ensure it is linked to the top of the kernel */
 .globl start
 start:
-    ldr sp, =0x802FFFF0
+    ldr sp, =0x812FFFF0
     
     ldr r0, =0              /* We are on CPU 0 */
 
     bl  mmu_early_fill_identity
 
-    /* Map kernel data */
-    ldr r1, =0x80000C02     /* Map 0x800xxxxx, using same attributes as mmu_early_set_descriptor */
+    /* Map kernel text */
+    ldr r1, =0x81000C02     /* Map 0x800xxxxx, using same attributes as mmu_early_set_descriptor */
     ldr r2, =4*0xABC        /* Index; 0xABCxxxxx will map to 0x800xxxxx */
     bl  mmu_early_set_descriptor
 
-    /* Map kernel text */
-    ldr r1, =0x80100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
+    /* Map kernel data */
+    ldr r1, =0x81100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
     ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x800xxxxx */
     bl  mmu_early_set_descriptor
 
     /* Map CPU0 kernel stack */
-    ldr r1, =0x80200C02     /* Map 0x802xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r1, =0x81200C02     /* Map 0x802xxxxx, using same attributes as mmu_early_set_descriptor */
     ldr r2, =4*0xABE        /* Index; 0xABExxxxx will map to 0x800xxxxx */
     bl  mmu_early_set_descriptor
 
@@ -39,24 +40,24 @@ start:
 /* Entry point for CPU 1 */
 .globl cpu1_start
 cpu1_start:
-    ldr sp, =0x803FFFF0
+    ldr sp, =0x813FFFF0
     
     ldr r0, =1              /* We are on CPU 1 */
 
     bl  mmu_early_fill_identity
 
-    /* Map kernel data */
-    ldr r1, =0x80000C02     /* Map 0x800xxxxx, using same attributes as mmu_early_set_descriptor */
+    /* Map kernel text */
+    ldr r1, =0x81000C02     /* Map 0x800xxxxx, using same attributes as mmu_early_set_descriptor */
     ldr r2, =4*0xABC        /* Index; 0xABCxxxxx will map to 0x800xxxxx */
     bl  mmu_early_set_descriptor
 
-    /* Map kernel text */
-    ldr r1, =0x80100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
+    /* Map kernel data */
+    ldr r1, =0x81100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
     ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x800xxxxx */
     bl  mmu_early_set_descriptor
 
     /* Map CPU1 kernel stack */
-    ldr r1, =0x80300C02     /* Map 0x803xxxxx, using same attributes as mmu_early_set_descriptor */
+    ldr r1, =0x81300C02     /* Map 0x803xxxxx, using same attributes as mmu_early_set_descriptor */
     ldr r2, =4*0xABF        /* Index; 0xABFxxxxx will map to 0x800xxxxx */
     bl  mmu_early_set_descriptor
 
@@ -72,6 +73,9 @@ cpu1_start:
     blx r0
 
     b   hang
+
+/* Everything else is in the .text section */
+.section .text
 
 /* MMU: Enable
  * r0: CPU number */
