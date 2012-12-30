@@ -15,12 +15,12 @@ start:
 
     /* Map kernel data */
     ldr r1, =0x81100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
-    ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x800xxxxx */
+    ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x801xxxxx */
     bl  mmu_early_set_descriptor
 
     /* Map CPU0 kernel stack */
     ldr r1, =0x81200C02     /* Map 0x802xxxxx, using same attributes as mmu_early_set_descriptor */
-    ldr r2, =4*0xABE        /* Index; 0xABExxxxx will map to 0x800xxxxx */
+    ldr r2, =4*0xABE        /* Index; 0xABExxxxx will map to 0x802xxxxx */
     bl  mmu_early_set_descriptor
 
     bl  mmu_enable
@@ -53,12 +53,12 @@ cpu1_start:
 
     /* Map kernel data */
     ldr r1, =0x81100C02     /* Map 0x801xxxxx, using same attributes as mmu_early_set_descriptor */
-    ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x800xxxxx */
+    ldr r2, =4*0xABD        /* Index; 0xABDxxxxx will map to 0x801xxxxx */
     bl  mmu_early_set_descriptor
 
     /* Map CPU1 kernel stack */
     ldr r1, =0x81300C02     /* Map 0x803xxxxx, using same attributes as mmu_early_set_descriptor */
-    ldr r2, =4*0xABF        /* Index; 0xABFxxxxx will map to 0x800xxxxx */
+    ldr r2, =4*0xABF        /* Index; 0xABFxxxxx will map to 0x803xxxxx */
     bl  mmu_early_set_descriptor
 
     bl  mmu_enable
@@ -114,7 +114,7 @@ mmu_early_set_descriptor:
     bx  lr
 
 /* MMU: fill table with identity mapping
- * r0: CPU number (untouched, passed directly to mmu_early_set_descriptor
+ * r0: CPU number (untouched, passed directly to mmu_early_set_descriptor)
  * r1: clobbered
  * r2: clobbered */
 mmu_early_fill_identity:
